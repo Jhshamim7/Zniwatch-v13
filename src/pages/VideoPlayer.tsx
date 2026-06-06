@@ -389,6 +389,10 @@ const VideoPlayer = () => {
     }
   }, [epId, id]);
 
+  const getProxiedUrl = (targetUrl: string) => {
+    return CORS_PROXY + encodeURIComponent(targetUrl);
+  };
+
   useEffect(() => {
     if (!playerContainerRef.current || !epId || !progressLoaded) return;
 
@@ -405,19 +409,6 @@ const VideoPlayer = () => {
         } else {
           setCurrentSubtitle(null);
         }
-
-      const getProxiedUrl = (targetUrl: string, referer?: string) => {
-          let proxiedUrl = CORS_PROXY + encodeURIComponent(targetUrl);
-          if (referer) {
-              try {
-                  const originStr = new URL(referer).origin;
-                  proxiedUrl += '&referer=' + encodeURIComponent(referer) + '&origin=' + encodeURIComponent(originStr);
-              } catch (e) {
-                  proxiedUrl += '&referer=' + encodeURIComponent(referer);
-              }
-          }
-          return proxiedUrl;
-      };
 
       if (artRef.current) {
         artRef.current.destroy();
@@ -457,7 +448,7 @@ const VideoPlayer = () => {
           cssVar: {},
             ...(defaultSub ? {
                   subtitle: {
-                    url: getProxiedUrl(defaultSub.file, result.referer),
+                    url: getProxiedUrl(defaultSub.file),
                     type: 'vtt',
                     encoding: 'utf-8',
                     escape: false,
@@ -471,7 +462,7 @@ const VideoPlayer = () => {
         customType: {
           m3u8: function (video: HTMLVideoElement, url: string) {
                 if (Hls.isSupported()) {
-                  let proxiedUrl = getProxiedUrl(url, result.referer);
+                  let proxiedUrl = getProxiedUrl(url);
 
                     const hls = new Hls({
                         enableWorker: true,
@@ -510,7 +501,7 @@ const VideoPlayer = () => {
                     xhrSetup: (xhr: XMLHttpRequest, xhrUrl: string) => {
                       let finalUrl = xhrUrl;
                       if (!finalUrl.startsWith(CORS_PROXY)) {
-                          finalUrl = getProxiedUrl(xhrUrl, result.referer);
+                          finalUrl = getProxiedUrl(xhrUrl);
                       }
                       xhr.open('GET', finalUrl, true);
                     },
@@ -841,19 +832,6 @@ const VideoPlayer = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getProxiedUrl = (targetUrl: string, referer?: string) => {
-      let proxiedUrl = CORS_PROXY + encodeURIComponent(targetUrl);
-      if (referer) {
-          try {
-              const originStr = new URL(referer).origin;
-              proxiedUrl += '&referer=' + encodeURIComponent(referer) + '&origin=' + encodeURIComponent(originStr);
-          } catch (e) {
-              proxiedUrl += '&referer=' + encodeURIComponent(referer);
-          }
-      }
-      return proxiedUrl;
-  };
-
     const changeSubtitle = (track: StreamTrack | null) => {
       const art = artRef.current;
       if (!art) return;
@@ -862,7 +840,7 @@ const VideoPlayer = () => {
         if (track) {
           setCurrentSubtitle(track.label);
           if (art.subtitle) {
-            art.subtitle.url = getProxiedUrl(track.file, streamData?.referer);
+            art.subtitle.url = getProxiedUrl(track.file);
             art.subtitle.show = true;
           }
         } else {
