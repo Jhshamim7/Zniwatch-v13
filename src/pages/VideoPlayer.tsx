@@ -72,7 +72,7 @@ const VideoPlayer = () => {
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverX, setHoverX] = useState<number>(0);
   const [servers, setServers] = useState<StreamServer[]>([]);
-  const [currentServer, setCurrentServer] = useState('hd-2');
+  const [currentServer, setCurrentServer] = useState('hd-3');
   const [streamData, setStreamData] = useState<StreamData | null>(null);
   const [subtitles, setSubtitles] = useState<StreamTrack[]>([]);
   const [showSubtitleMenu, setShowSubtitleMenu] = useState(false);
@@ -368,8 +368,10 @@ const VideoPlayer = () => {
       const fakeServers = [
         { type: 'sub', data_id: 'hd-1', server_id: 'hd-1', serverName: 'HD-1' },
         { type: 'sub', data_id: 'hd-2', server_id: 'hd-2', serverName: 'HD-2' },
+        { type: 'sub', data_id: 'hd-3', server_id: 'hd-3', serverName: 'HD-3' },
         { type: 'dub', data_id: 'hd-1', server_id: 'hd-1', serverName: 'HD-1' },
-        { type: 'dub', data_id: 'hd-2', server_id: 'hd-2', serverName: 'HD-2' }
+        { type: 'dub', data_id: 'hd-2', server_id: 'hd-2', serverName: 'HD-2' },
+        { type: 'dub', data_id: 'hd-3', server_id: 'hd-3', serverName: 'HD-3' }
       ];
       setServers(fakeServers);
       setHasDub(true);
