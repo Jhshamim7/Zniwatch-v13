@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Maximize, Minimize, AlertCircle, SkipForward, Play, Pause, Volume2, VolumeX, Settings, Server, Captions, CaptionsOff, RotateCcw, RotateCw, Gauge, Languages } from 'lucide-react';
+import { ArrowLeft, Maximize, Minimize, AlertCircle, SkipForward, Play, Pause, Volume2, VolumeX, Settings, Server, Captions, CaptionsOff, RotateCcw, RotateCw, Type, Languages } from 'lucide-react';
 import { useAnimeDetails, useAnimeEpisodes } from '@/hooks/useAnime';
 import { useWatchHistory } from '@/hooks/useWatchHistory';
 import { WatchHistoryEntry } from '@/lib/db';
@@ -12,7 +12,7 @@ import Hls from 'hls.js';
 const API_BASE = 'https://anikoto-api.vercel.app';
 const CORS_PROXY = 'https://m3u8-proxy-v1.jahinalamshamim.workers.dev/proxy?url=';
 
-const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const SUBTITLE_SIZES = [50, 75, 100, 125, 150, 175, 200];
 const ASPECT_RATIOS = ['Default', '16:9', '4:3', '2.35:1', 'Full'];
 
 interface StreamServer {
@@ -54,7 +54,7 @@ const VideoPlayer = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [subtitleSize, setSubtitleSize] = useState(100);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [buffered, setBuffered] = useState(0);
@@ -63,7 +63,7 @@ const VideoPlayer = () => {
   const [currentQuality, setCurrentQuality] = useState(-1);
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [showServerMenu, setShowServerMenu] = useState(false);
-  const [showPlaybackSpeedMenu, setShowPlaybackSpeedMenu] = useState(false);
+  const [showSubtitleSizeMenu, setShowSubtitleSizeMenu] = useState(false);
   const [showAspectRatioMenu, setShowAspectRatioMenu] = useState(false);
   const [aspectRatio, setAspectRatio] = useState('Default');
   const [seekFeedback, setSeekFeedback] = useState<'forward' | 'backward' | null>(null);
@@ -178,12 +178,9 @@ const VideoPlayer = () => {
     triggerSeekFeedback('backward');
   }, []);
 
-  const changePlaybackSpeed = (speed: number) => {
-    const art = artRef.current;
-    if (!art) return;
-    art.playbackRate = speed;
-    setPlaybackSpeed(speed);
-    setShowPlaybackSpeedMenu(false);
+  const changeSubtitleSize = (size: number) => {
+    setSubtitleSize(size);
+    setShowSubtitleSizeMenu(false);
   };
 
   const changeAspectRatio = (ratio: string) => {
@@ -944,7 +941,7 @@ const VideoPlayer = () => {
             display: none !important;
           }
             .art-video-player .art-subtitle {
-              font-size: 1rem !important;
+              font-size: ${1 * (subtitleSize / 100)}rem !important;
               text-shadow: 2px 2px 4px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9), 1px -1px 3px rgba(0,0,0,0.9), -1px 1px 3px rgba(0,0,0,0.9) !important;
               bottom: 48px !important;
               padding: 0 10px !important;
@@ -961,7 +958,7 @@ const VideoPlayer = () => {
             }
             @media (min-width: 768px) {
               .art-video-player .art-subtitle {
-                font-size: 1.4rem !important;
+                font-size: ${1.4 * (subtitleSize / 100)}rem !important;
                 bottom: 56px !important;
                 padding: 0 18px !important;
                 max-width: 80% !important;
@@ -1078,7 +1075,7 @@ const VideoPlayer = () => {
             <div className="flex items-center gap-2">
               <div className="relative">
                 <button
-                  onClick={(e) => { e.stopPropagation(); setShowServerMenu(!showServerMenu); setShowQualityMenu(false); setShowSubtitleMenu(false); setShowPlaybackSpeedMenu(false); setShowAudioMenu(false); }}
+                  onClick={(e) => { e.stopPropagation(); setShowServerMenu(!showServerMenu); setShowQualityMenu(false); setShowSubtitleMenu(false); setShowSubtitleSizeMenu(false); setShowAudioMenu(false); }}
                   className="w-10 h-10 rounded-full bg-black/20 flex items-center justify-center hover:bg-white/10 transition-colors"
                 >
                   <Server className="w-5 h-5" />
@@ -1102,7 +1099,7 @@ const VideoPlayer = () => {
               </div>
                 <div className="relative">
                   <button
-                    onClick={(e) => { e.stopPropagation(); setShowQualityMenu(!showQualityMenu); setShowServerMenu(false); setShowSubtitleMenu(false); setShowPlaybackSpeedMenu(false); setShowAudioMenu(false); }}
+                    onClick={(e) => { e.stopPropagation(); setShowQualityMenu(!showQualityMenu); setShowServerMenu(false); setShowSubtitleMenu(false); setShowSubtitleSizeMenu(false); setShowAudioMenu(false); }}
                     className="w-10 h-10 rounded-full bg-black/20 flex items-center justify-center hover:bg-white/10 transition-colors"
                   >
                     <Settings className="w-5 h-5" />
@@ -1233,24 +1230,24 @@ const VideoPlayer = () => {
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     <button
-                      onClick={(e) => { e.stopPropagation(); setShowPlaybackSpeedMenu(!showPlaybackSpeedMenu); setShowQualityMenu(false); setShowServerMenu(false); setShowSubtitleMenu(false); setShowAudioMenu(false); }}
+                      onClick={(e) => { e.stopPropagation(); setShowSubtitleSizeMenu(!showSubtitleSizeMenu); setShowQualityMenu(false); setShowServerMenu(false); setShowSubtitleMenu(false); setShowAudioMenu(false); }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors text-sm font-bold"
                     >
-                      <Gauge className="w-4 h-4 text-primary" />
-                      {playbackSpeed === 1 ? 'Normal' : `${playbackSpeed}x`}
+                      <Type className="w-4 h-4 text-primary" />
+                      {subtitleSize}%
                     </button>
-                    {showPlaybackSpeedMenu && (
+                    {showSubtitleSizeMenu && (
                       <div className="absolute right-0 bottom-full mb-2 bg-black/95 rounded-lg overflow-hidden min-w-[100px] border border-white/10 shadow-2xl">
-                        <div className="px-3 py-2 text-xs text-gray-400 border-b border-white/10 uppercase tracking-wider font-bold">Speed</div>
-                        {PLAYBACK_SPEEDS.map((speed) => (
+                        <div className="px-3 py-2 text-xs text-gray-400 border-b border-white/10 uppercase tracking-wider font-bold">Size</div>
+                        {SUBTITLE_SIZES.map((size) => (
                           <button
-                            key={speed}
-                            onClick={(e) => { e.stopPropagation(); changePlaybackSpeed(speed); }}
+                            key={size}
+                            onClick={(e) => { e.stopPropagation(); changeSubtitleSize(size); }}
                             className={`w-full px-4 py-2.5 text-left text-sm hover:bg-white/10 transition-colors ${
-                              playbackSpeed === speed ? 'text-primary bg-white/5' : ''
+                              subtitleSize === size ? 'text-primary bg-white/5' : ''
                             }`}
                           >
-                            {speed}x
+                            {size}%
                           </button>
                         ))}
                       </div>
@@ -1259,7 +1256,7 @@ const VideoPlayer = () => {
 
                     <div className="relative">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setShowSubtitleMenu(!showSubtitleMenu); setShowQualityMenu(false); setShowServerMenu(false); setShowPlaybackSpeedMenu(false); setShowAudioMenu(false); }}
+                        onClick={(e) => { e.stopPropagation(); setShowSubtitleMenu(!showSubtitleMenu); setShowQualityMenu(false); setShowServerMenu(false); setShowSubtitleSizeMenu(false); setShowAudioMenu(false); }}
                         className="w-10 h-10 rounded-full hover:bg-white/10 transition-colors flex items-center justify-center"
                       >
                         {currentSubtitle ? <Captions className="w-5 h-5" /> : <CaptionsOff className="w-5 h-5" />}
@@ -1289,7 +1286,7 @@ const VideoPlayer = () => {
                     {hasDub && (
                       <div className="relative">
                         <button
-                          onClick={(e) => { e.stopPropagation(); setShowAudioMenu(!showAudioMenu); setShowQualityMenu(false); setShowServerMenu(false); setShowPlaybackSpeedMenu(false); setShowSubtitleMenu(false); }}
+                          onClick={(e) => { e.stopPropagation(); setShowAudioMenu(!showAudioMenu); setShowQualityMenu(false); setShowServerMenu(false); setShowSubtitleSizeMenu(false); setShowSubtitleMenu(false); }}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors text-sm font-bold"
                         >
                           <Languages className="w-4 h-4 text-primary" />
