@@ -38,7 +38,6 @@ jobs:
 
       - name: Initialize Android Project
         run: |
-          npx cap init "Anime Streaming" com.animestreaming.app --web-dir=dist
           npx cap add android
 
       - name: Sync Web Assets to Native Android
