@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Maximize, Minimize, AlertCircle, SkipForward, Play, Pause, Volume2, VolumeX, Settings, Server, Captions, CaptionsOff, RotateCcw, RotateCw, Type, Languages } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
+import { ScreenOrientation } from '@capacitor/screen-orientation';
+import { StatusBar } from '@capacitor/status-bar';
 import { useAnimeDetails, useAnimeEpisodes } from '@/hooks/useAnime';
 import { useWatchHistory } from '@/hooks/useWatchHistory';
 import { WatchHistoryEntry } from '@/lib/db';
@@ -356,7 +358,16 @@ const VideoPlayer = () => {
 
     for (const srv of serversToTry) {
       try {
-        const streamUrl = `${API_BASE}/api/stream?id=${id}&ep=${epId}&server=${srv}&type=${type}`;
+        let base = '';
+        if (Capacitor.isNativePlatform()) {
+          base = process.env.APP_URL || '';
+          if (!base || base.includes('localhost') || !base.startsWith('http')) {
+            base = 'https://ais-pre-ydoeyf4rj23oav6uh27iwl-394991896281.asia-east1.run.app';
+          }
+        }
+        base = base.replace(/\/$/, '');
+        const fetchBase = base || API_BASE;
+        const streamUrl = `${fetchBase}/api/stream?id=${id}&ep=${epId}&server=${srv}&type=${type}`;
         const res = await fetch(streamUrl);
         const json = await res.json();
 
@@ -394,7 +405,15 @@ const VideoPlayer = () => {
   }, [epId, id]);
 
   const getProxiedUrl = (targetUrl: string, referer?: string) => {
-    let url = `/api/stream?url=${encodeURIComponent(targetUrl)}`;
+    let base = '';
+    if (Capacitor.isNativePlatform()) {
+      base = process.env.APP_URL || '';
+      if (!base || base.includes('localhost') || !base.startsWith('http')) {
+        base = 'https://ais-pre-ydoeyf4rj23oav6uh27iwl-394991896281.asia-east1.run.app';
+      }
+    }
+    base = base.replace(/\/$/, '');
+    let url = `${base}/api/stream?url=${encodeURIComponent(targetUrl)}`;
     if (referer) {
       url += `&referer=${encodeURIComponent(referer)}&origin=${encodeURIComponent(referer.replace(/\/$/, ''))}`;
     }
@@ -433,9 +452,8 @@ const VideoPlayer = () => {
         hlsInstanceRef.current = null;
       }
 
-      const isNative = Capacitor.isNativePlatform();
-      const finalStreamUrl = isNative ? streamUrl : getProxiedUrl(streamUrl, result.data.referer);
-      const finalSubUrl = defaultSub ? (isNative ? defaultSub.file : getProxiedUrl(defaultSub.file, result.data.referer)) : '';
+      const finalStreamUrl = getProxiedUrl(streamUrl, result.data.referer);
+      const finalSubUrl = defaultSub ? getProxiedUrl(defaultSub.file, result.data.referer) : '';
 
       const art = new Artplayer({
         container: playerContainerRef.current!,
@@ -685,13 +703,26 @@ const VideoPlayer = () => {
   }, []);
 
   const lockToLandscape = useCallback(async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await ScreenOrientation.lock({ orientation: 'landscape' });
+        await StatusBar.hide();
+        setForceRotate(false);
+        return true;
+      } catch (err) {
+        console.warn('Native screen lock / status bar hide failed:', err);
+      }
+    }
+
     try {
       if (screen.orientation && 'lock' in screen.orientation) {
-        await (screen.orientation as any).lock('landscape');
+        await (screen.orientation as unknown as { lock: (orientation: string) => Promise<void> }).lock('landscape');
         setForceRotate(false);
         return true;
       }
-    } catch {}
+    } catch (err) {
+      console.debug('Web screen orientation lock failed:', err);
+    }
 
     if (isPortrait()) {
       setForceRotate(true);
@@ -700,12 +731,34 @@ const VideoPlayer = () => {
   }, [isPortrait]);
 
   useEffect(() => {
+    lockToLandscape();
+
+    return () => {
+      if (Capacitor.isNativePlatform()) {
+        ScreenOrientation.unlock().catch((err) => {
+          console.debug('Native screen unlock failed:', err);
+        });
+        StatusBar.show().catch((err) => {
+          console.debug('Native status bar show failed:', err);
+        });
+      }
+      try {
+        screen.orientation.unlock();
+      } catch (err) {
+        console.debug('Web screen orientation unlock failed:', err);
+      }
+    };
+  }, [lockToLandscape]);
+
+  useEffect(() => {
     const handleFullscreenChange = () => {
-      const isFs = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+      const isFs = !!(document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement);
       setIsFullscreen(isFs);
 
       if (isFs) {
-        lockToLandscape();
+        lockToLandscape().catch((err) => {
+          console.debug('Failed locking to landscape:', err);
+        });
       } else {
         setForceRotate(false);
       }
@@ -721,9 +774,9 @@ const VideoPlayer = () => {
 
   useEffect(() => {
     const enterFullscreenLandscape = async () => {
-      if (document.fullscreenElement || (document as any).webkitFullscreenElement) return;
+      if (document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement) return;
 
-      const elem = containerRef.current as any;
+      const elem = containerRef.current as HTMLDivElement & { webkitRequestFullscreen?: () => Promise<void> };
 
       try {
         if (elem?.requestFullscreen) {
@@ -732,11 +785,15 @@ const VideoPlayer = () => {
           await elem.webkitRequestFullscreen();
         }
         await lockToLandscape();
-      } catch {}
+      } catch (err) {
+        console.debug('Failed to request fullscreen:', err);
+      }
     };
 
     const timer = setTimeout(() => {
-      enterFullscreenLandscape();
+      enterFullscreenLandscape().catch((err) => {
+        console.debug('Fullscreen enter error:', err);
+      });
     }, 100);
 
     return () => {
@@ -778,13 +835,30 @@ const VideoPlayer = () => {
   const handleBack = async () => {
     await doSaveProgress();
 
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await ScreenOrientation.unlock();
+      } catch (err) {
+        console.debug('Failed to unlock ScreenOrientation:', err);
+      }
+      try {
+        await StatusBar.show();
+      } catch (err) {
+        console.debug('Failed to show StatusBar:', err);
+      }
+    }
+
     if (document.fullscreenElement) {
-      await document.exitFullscreen().catch(() => {});
+      await document.exitFullscreen().catch((err) => {
+        console.debug('Failed to exit fullscreen:', err);
+      });
     }
 
     try {
       await screen.orientation.unlock();
-    } catch {}
+    } catch (err) {
+      console.debug('Failed to unlock standard screen orientation:', err);
+    }
 
     if (artRef.current) {
       artRef.current.destroy();
@@ -861,8 +935,7 @@ const VideoPlayer = () => {
         if (track) {
           setCurrentSubtitle(track.label);
           if (art.subtitle) {
-            const isNative = Capacitor.isNativePlatform();
-            art.subtitle.url = isNative ? track.file : getProxiedUrl(track.file, streamData?.referer || '');
+            art.subtitle.url = getProxiedUrl(track.file, streamData?.referer || '');
             art.subtitle.show = true;
           }
         } else {
@@ -927,7 +1000,7 @@ const VideoPlayer = () => {
         height: '100vh',
       }}
       onMouseMove={(e) => {
-          if (e.nativeEvent instanceof MouseEvent && !(e.nativeEvent as any).sourceCapabilities?.firesTouchEvents) {
+          if (e.nativeEvent instanceof MouseEvent && !(e.nativeEvent as MouseEvent & { sourceCapabilities?: { firesTouchEvents?: boolean } }).sourceCapabilities?.firesTouchEvents) {
             resetControlsTimeout();
           }
         }}
@@ -938,6 +1011,16 @@ const VideoPlayer = () => {
       />
 
       <style>{`
+        html, body, #root {
+          padding: 0 !important;
+          margin: 0 !important;
+          border: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          overflow: hidden !important;
+          max-width: none !important;
+          max-height: none !important;
+        }
         .art-video-player {
           position: absolute !important;
           inset: 0 !important;
