@@ -163,6 +163,9 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 3000,
   },
+  define: {
+    "process.env.APP_URL": JSON.stringify(process.env.APP_URL || ""),
+  },
   plugins: [
     react(),
     logErrorsPlugin(),
