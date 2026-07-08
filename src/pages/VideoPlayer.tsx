@@ -3,8 +3,26 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Maximize, Minimize, AlertCircle, SkipForward, Play, Pause, Volume2, VolumeX, Settings, Server, Captions, CaptionsOff, RotateCcw, RotateCw, Type, Languages } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
-import { ScreenOrientation } from '@capacitor/screen-orientation';
-import { StatusBar } from '@capacitor/status-bar';
+
+const getCapacitorOrientation = async () => {
+  try {
+    const mod = await import(/* @vite-ignore */ '@capacitor/screen-orientation');
+    return mod.ScreenOrientation;
+  } catch (err) {
+    console.debug('Failed to dynamically import @capacitor/screen-orientation:', err);
+    return null;
+  }
+};
+
+const getCapacitorStatusBar = async () => {
+  try {
+    const mod = await import(/* @vite-ignore */ '@capacitor/status-bar');
+    return mod.StatusBar;
+  } catch (err) {
+    console.debug('Failed to dynamically import @capacitor/status-bar:', err);
+    return null;
+  }
+};
 import { useAnimeDetails, useAnimeEpisodes } from '@/hooks/useAnime';
 import { useWatchHistory } from '@/hooks/useWatchHistory';
 import { WatchHistoryEntry } from '@/lib/db';
@@ -696,8 +714,14 @@ const VideoPlayer = () => {
   const lockToLandscape = useCallback(async () => {
     if (Capacitor.isNativePlatform()) {
       try {
-        await ScreenOrientation.lock({ orientation: 'landscape' });
-        await StatusBar.hide();
+        const ScreenOrientation = await getCapacitorOrientation();
+        if (ScreenOrientation) {
+          await ScreenOrientation.lock({ orientation: 'landscape' });
+        }
+        const StatusBar = await getCapacitorStatusBar();
+        if (StatusBar) {
+          await StatusBar.hide();
+        }
         setForceRotate(false);
         return true;
       } catch (err) {
@@ -726,11 +750,19 @@ const VideoPlayer = () => {
 
     return () => {
       if (Capacitor.isNativePlatform()) {
-        ScreenOrientation.unlock().catch((err) => {
-          console.debug('Native screen unlock failed:', err);
+        getCapacitorOrientation().then((so) => {
+          if (so) {
+            so.unlock().catch((err: unknown) => {
+              console.debug('Native screen unlock failed:', err);
+            });
+          }
         });
-        StatusBar.show().catch((err) => {
-          console.debug('Native status bar show failed:', err);
+        getCapacitorStatusBar().then((sb) => {
+          if (sb) {
+            sb.show().catch((err: unknown) => {
+              console.debug('Native status bar show failed:', err);
+            });
+          }
         });
       }
       try {
@@ -828,12 +860,18 @@ const VideoPlayer = () => {
 
     if (Capacitor.isNativePlatform()) {
       try {
-        await ScreenOrientation.unlock();
+        const ScreenOrientation = await getCapacitorOrientation();
+        if (ScreenOrientation) {
+          await ScreenOrientation.unlock();
+        }
       } catch (err) {
         console.debug('Failed to unlock ScreenOrientation:', err);
       }
       try {
-        await StatusBar.show();
+        const StatusBar = await getCapacitorStatusBar();
+        if (StatusBar) {
+          await StatusBar.show();
+        }
       } catch (err) {
         console.debug('Failed to show StatusBar:', err);
       }
