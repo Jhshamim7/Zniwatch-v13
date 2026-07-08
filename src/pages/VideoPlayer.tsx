@@ -358,16 +358,7 @@ const VideoPlayer = () => {
 
     for (const srv of serversToTry) {
       try {
-        let base = '';
-        if (Capacitor.isNativePlatform()) {
-          base = process.env.APP_URL || '';
-          if (!base || base.includes('localhost') || !base.startsWith('http')) {
-            base = 'https://ais-pre-ydoeyf4rj23oav6uh27iwl-394991896281.asia-east1.run.app';
-          }
-        }
-        base = base.replace(/\/$/, '');
-        const fetchBase = base || API_BASE;
-        const streamUrl = `${fetchBase}/api/stream?id=${id}&ep=${epId}&server=${srv}&type=${type}`;
+        const streamUrl = `${API_BASE}/api/stream?id=${id}&ep=${epId}&server=${srv}&type=${type}`;
         const res = await fetch(streamUrl);
         const json = await res.json();
 
@@ -985,7 +976,7 @@ const VideoPlayer = () => {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 bg-black overflow-hidden select-none"
+      className="fixed inset-0 bg-black overflow-hidden select-none p-0 m-0 border-0 rounded-none shadow-none z-[9999]"
       style={forceRotate ? {
         position: 'fixed',
         top: 0,
@@ -1007,11 +998,11 @@ const VideoPlayer = () => {
     >
       <div
         ref={playerContainerRef}
-        className="absolute inset-0 w-full h-full z-0"
+        className="absolute inset-0 w-full h-full z-0 p-0 m-0 border-0 rounded-none shadow-none"
       />
 
       <style>{`
-        html, body, #root {
+        html, body, #root, .artplayer-app, .art-video-player, .art-video, video {
           padding: 0 !important;
           margin: 0 !important;
           border: 0 !important;
@@ -1020,6 +1011,18 @@ const VideoPlayer = () => {
           overflow: hidden !important;
           max-width: none !important;
           max-height: none !important;
+          box-sizing: border-box !important;
+          outline: none !important;
+          box-shadow: none !important;
+          border-radius: 0 !important;
+          --safe-area-inset-top: 0px !important;
+          --safe-area-inset-right: 0px !important;
+          --safe-area-inset-bottom: 0px !important;
+          --safe-area-inset-left: 0px !important;
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+          padding-left: 0 !important;
+          padding-right: 0 !important;
         }
         .art-video-player {
           position: absolute !important;
@@ -1172,7 +1175,7 @@ const VideoPlayer = () => {
             <div className="flex items-center gap-2">
               <div className="relative">
                 <button
-                  onClick={(e) => { e.stopPropagation(); setShowServerMenu(!showServerMenu); setShowQualityMenu(false); setShowSubtitleMenu(false); setShowSubtitleSizeMenu(false); setShowAudioMenu(false); }}
+                  onClick={(e) => { e.stopPropagation(); setShowServerMenu(!showServerMenu); setShowQualityMenu(false); setShowSubtitleMenu(false); setShowSubtitleSizeMenu(false); setShowAudioMenu(false); setShowAspectRatioMenu(false); }}
                   className="w-10 h-10 rounded-full bg-black/20 flex items-center justify-center hover:bg-white/10 transition-colors"
                 >
                   <Server className="w-5 h-5" />
@@ -1196,7 +1199,7 @@ const VideoPlayer = () => {
               </div>
                 <div className="relative">
                   <button
-                    onClick={(e) => { e.stopPropagation(); setShowQualityMenu(!showQualityMenu); setShowServerMenu(false); setShowSubtitleMenu(false); setShowSubtitleSizeMenu(false); setShowAudioMenu(false); }}
+                    onClick={(e) => { e.stopPropagation(); setShowQualityMenu(!showQualityMenu); setShowServerMenu(false); setShowSubtitleMenu(false); setShowSubtitleSizeMenu(false); setShowAudioMenu(false); setShowAspectRatioMenu(false); }}
                     className="w-10 h-10 rounded-full bg-black/20 flex items-center justify-center hover:bg-white/10 transition-colors"
                   >
                     <Settings className="w-5 h-5" />
@@ -1327,7 +1330,7 @@ const VideoPlayer = () => {
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     <button
-                      onClick={(e) => { e.stopPropagation(); setShowSubtitleSizeMenu(!showSubtitleSizeMenu); setShowQualityMenu(false); setShowServerMenu(false); setShowSubtitleMenu(false); setShowAudioMenu(false); }}
+                      onClick={(e) => { e.stopPropagation(); setShowSubtitleSizeMenu(!showSubtitleSizeMenu); setShowQualityMenu(false); setShowServerMenu(false); setShowSubtitleMenu(false); setShowAudioMenu(false); setShowAspectRatioMenu(false); }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors text-sm font-bold"
                     >
                       <Type className="w-4 h-4 text-primary" />
@@ -1353,7 +1356,7 @@ const VideoPlayer = () => {
 
                     <div className="relative">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setShowSubtitleMenu(!showSubtitleMenu); setShowQualityMenu(false); setShowServerMenu(false); setShowSubtitleSizeMenu(false); setShowAudioMenu(false); }}
+                        onClick={(e) => { e.stopPropagation(); setShowSubtitleMenu(!showSubtitleMenu); setShowQualityMenu(false); setShowServerMenu(false); setShowSubtitleSizeMenu(false); setShowAudioMenu(false); setShowAspectRatioMenu(false); }}
                         className="w-10 h-10 rounded-full hover:bg-white/10 transition-colors flex items-center justify-center"
                       >
                         {currentSubtitle ? <Captions className="w-5 h-5" /> : <CaptionsOff className="w-5 h-5" />}
@@ -1380,10 +1383,37 @@ const VideoPlayer = () => {
                       )}
                     </div>
 
+                    {/* Aspect Ratio Menu Button */}
+                    <div className="relative">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowAspectRatioMenu(!showAspectRatioMenu); setShowQualityMenu(false); setShowServerMenu(false); setShowSubtitleSizeMenu(false); setShowSubtitleMenu(false); setShowAudioMenu(false); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors text-sm font-bold"
+                      >
+                        <Maximize className="w-4 h-4 text-primary" />
+                        Aspect: {aspectRatio}
+                      </button>
+                      {showAspectRatioMenu && (
+                        <div className="absolute right-0 bottom-full mb-2 bg-black/95 rounded-lg overflow-hidden min-w-[140px] border border-white/10 shadow-2xl z-50">
+                          <div className="px-3 py-2 text-xs text-gray-400 border-b border-white/10 uppercase tracking-wider font-bold">Aspect Ratio</div>
+                          {ASPECT_RATIOS.map((ratio) => (
+                            <button
+                              key={ratio}
+                              onClick={(e) => { e.stopPropagation(); changeAspectRatio(ratio); }}
+                              className={`w-full px-4 py-2.5 text-left text-sm hover:bg-white/10 transition-colors ${
+                                aspectRatio === ratio ? 'text-primary bg-white/5' : ''
+                              }`}
+                            >
+                              {ratio === 'Full' ? 'Stretch (Full)' : ratio}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     {hasDub && (
                       <div className="relative">
                         <button
-                          onClick={(e) => { e.stopPropagation(); setShowAudioMenu(!showAudioMenu); setShowQualityMenu(false); setShowServerMenu(false); setShowSubtitleSizeMenu(false); setShowSubtitleMenu(false); }}
+                          onClick={(e) => { e.stopPropagation(); setShowAudioMenu(!showAudioMenu); setShowQualityMenu(false); setShowServerMenu(false); setShowSubtitleSizeMenu(false); setShowSubtitleMenu(false); setShowAspectRatioMenu(false); }}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors text-sm font-bold"
                         >
                           <Languages className="w-4 h-4 text-primary" />
